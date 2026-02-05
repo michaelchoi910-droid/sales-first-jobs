@@ -38,6 +38,7 @@ nohup python3 auto_monitor.py > monitor.log 2>&1 &
 `config.py` 파일 편집:
 - 필터 키워드 변경
 - 체크 주기 조절
+- **Google Drive 특정 폴더에 자동 저장** 📁
 - Claude 모델 선택 (비용 최적화)
 - Google Docs 자동 업로드 on/off
 

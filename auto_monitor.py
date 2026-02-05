@@ -32,7 +32,8 @@ try:
         MAX_OUTPUT_TOKENS,
         MAX_TOKENS_PER_SECTION,
         ENABLE_GOOGLE_DOCS,
-        GOOGLE_DOCS_TITLE_FORMAT
+        GOOGLE_DOCS_TITLE_FORMAT,
+        GOOGLE_DRIVE_FOLDER_ID
     )
 except ImportError:
     # Fallback to defaults if config.py doesn't exist
@@ -43,6 +44,7 @@ except ImportError:
     MAX_TOKENS_PER_SECTION = 4000
     ENABLE_GOOGLE_DOCS = True
     GOOGLE_DOCS_TITLE_FORMAT = "{title} - 인터뷰 분석 - {date}"
+    GOOGLE_DRIVE_FOLDER_ID = ""
 
 
 def load_processed_ids():
@@ -198,12 +200,20 @@ def process_transcript(transcript_id, title):
                 )
                 doc_id, doc_url = google_docs.upload_markdown_document(doc_title, complete_document)
 
+                # Move to specific folder if configured
+                if GOOGLE_DRIVE_FOLDER_ID:
+                    print(f"   📁 Moving to folder...")
+                    google_docs.move_to_folder(doc_id, GOOGLE_DRIVE_FOLDER_ID)
+                    print(f"   ✅ Moved to folder: {GOOGLE_DRIVE_FOLDER_ID}")
+
                 # Save URL
                 url_file = os.path.join(output_dir, "google_docs_url.txt")
                 with open(url_file, 'w') as f:
                     f.write(f"Title: {doc_title}\n")
                     f.write(f"URL: {doc_url}\n")
                     f.write(f"ID: {doc_id}\n")
+                    if GOOGLE_DRIVE_FOLDER_ID:
+                        f.write(f"Folder ID: {GOOGLE_DRIVE_FOLDER_ID}\n")
 
                 print(f"   ✅ Google Docs: {doc_url}")
 

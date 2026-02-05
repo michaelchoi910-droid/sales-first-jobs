@@ -65,6 +65,17 @@ GOOGLE_DOCS_TITLE_FORMAT = "{title} - 인터뷰 분석 - {date}"
 # GOOGLE_DOCS_TITLE_FORMAT = "[분석] {title}"
 # GOOGLE_DOCS_TITLE_FORMAT = "{date} - {title} - 세일즈 인터뷰"
 
+# Google Drive 폴더 ID (문서를 저장할 폴더)
+# 폴더 ID 찾는 방법:
+#   1. Google Drive에서 원하는 폴더 열기
+#   2. URL 확인: https://drive.google.com/drive/folders/[여기가_폴더_ID]
+#   3. 아래에 붙여넣기
+GOOGLE_DRIVE_FOLDER_ID = ""  # 비어있으면 루트 폴더에 생성
+
+# 예시:
+# GOOGLE_DRIVE_FOLDER_ID = "1a2b3c4d5e6f7g8h9i0j"  # 특정 폴더
+# GOOGLE_DRIVE_FOLDER_ID = ""                       # 루트 폴더 (기본값)
+
 
 # ============================================================================
 # 알림 설정 (향후 확장)

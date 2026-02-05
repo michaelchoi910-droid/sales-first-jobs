@@ -43,11 +43,42 @@ nano .env
 
 Google Docs 자동 업로드를 원하면:
 
+#### 3.1 서비스 계정 생성
+
 ```bash
 python src/main.py --setup-google
 ```
 
 가이드를 따라 서비스 계정 생성 후 JSON 키 파일 다운로드
+
+#### 3.2 Google Drive 폴더 설정 (추천!)
+
+특정 폴더에 문서를 자동으로 생성하려면:
+
+**방법 1: 자동 설정 (쉬움)** ⭐
+```bash
+python3 find_google_folder.py
+```
+
+대화형으로 폴더를 선택하면 자동으로 config.py에 설정됩니다.
+
+**방법 2: 수동 설정**
+
+1. Google Drive에서 원하는 폴더 열기
+2. URL에서 폴더 ID 복사:
+   ```
+   https://drive.google.com/drive/folders/[여기가_폴더_ID]
+   ```
+3. `config.py` 파일 편집:
+   ```python
+   GOOGLE_DRIVE_FOLDER_ID = "복사한_폴더_ID"
+   ```
+
+**방법 3: URL로 설정**
+```bash
+python3 find_google_folder.py
+# 옵션 2 선택 → URL 붙여넣기
+```
 
 ---
 
