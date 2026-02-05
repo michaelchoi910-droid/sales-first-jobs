@@ -15,15 +15,31 @@
 **가이드**: [WEB_CLAUDE_WORKFLOW.md](./WEB_CLAUDE_WORKFLOW.md)
 **프롬프트 템플릿**: [PROMPTS_TEMPLATE.md](./PROMPTS_TEMPLATE.md)
 
-### 방법 2: API 자동화 시스템 (추가 비용 발생) 💰
+### 방법 2: 완전 자동화 시스템 (추가 비용 발생) 💰
 
 **정기적으로 많은 인터뷰를 처리하는 경우 이 방법을 사용하세요.**
 
-- ✅ 완전 자동화 (5분 설정 + 자동 실행)
-- ✅ 여러 인터뷰 배치 처리 가능
+#### ✨ 완전 자동화 기능
+- ✅ **손 하나 안 대고**: Fireflies 업로드 → 자동 처리 → Google Docs 생성
+- ✅ **스마트 필터링**: "세일즈 하이브 인터뷰" 키워드 인터뷰만 자동 처리
+- ✅ **백그라운드 실행**: 터미널 닫아도 계속 동작
+- ✅ **5분마다 자동 체크**: 새 인터뷰 즉시 감지
 - ❌ **추가 비용**: 인터뷰당 약 $1.65 (Anthropic API 종량제)
 
-**가이드**: 아래 설치 및 사용 방법 참조
+**가이드**: [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) 📖
+
+#### 빠른 시작
+```bash
+cd ~/Documents/sales-first-jobs
+nohup python3 auto_monitor.py > monitor.log 2>&1 &
+```
+
+#### 설정 커스터마이징
+`config.py` 파일 편집:
+- 필터 키워드 변경
+- 체크 주기 조절
+- Claude 모델 선택 (비용 최적화)
+- Google Docs 자동 업로드 on/off
 
 ---
 

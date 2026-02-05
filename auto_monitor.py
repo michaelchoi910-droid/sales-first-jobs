@@ -23,6 +23,27 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Load environment variables
 load_dotenv()
 
+# Load configuration
+try:
+    from config import (
+        FILTER_KEYWORD,
+        CHECK_INTERVAL,
+        CLAUDE_MODEL,
+        MAX_OUTPUT_TOKENS,
+        MAX_TOKENS_PER_SECTION,
+        ENABLE_GOOGLE_DOCS,
+        GOOGLE_DOCS_TITLE_FORMAT
+    )
+except ImportError:
+    # Fallback to defaults if config.py doesn't exist
+    FILTER_KEYWORD = "세일즈 하이브 인터뷰"
+    CHECK_INTERVAL = 300
+    CLAUDE_MODEL = "claude-3-7-sonnet-20250219"
+    MAX_OUTPUT_TOKENS = 16000
+    MAX_TOKENS_PER_SECTION = 4000
+    ENABLE_GOOGLE_DOCS = True
+    GOOGLE_DOCS_TITLE_FORMAT = "{title} - 인터뷰 분석 - {date}"
+
 
 def load_processed_ids():
     """Load list of already processed transcript IDs"""
@@ -49,6 +70,7 @@ def check_new_transcripts():
     from src.fireflies_client import FirefliesClient
 
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔍 Checking for new transcripts...")
+    print(f"   📌 Filter: '{FILTER_KEYWORD}' 키워드 포함 인터뷰만 처리")
 
     try:
         client = FirefliesClient()
@@ -62,17 +84,32 @@ def check_new_transcripts():
         processed_ids = [p['id'] for p in load_processed_ids()]
         new_transcripts = [t for t in transcripts if t['id'] not in processed_ids]
 
+        # 🎯 키워드 필터링 추가
+        filtered_transcripts = [
+            t for t in new_transcripts
+            if FILTER_KEYWORD in t.get('title', '')
+        ]
+
+        # 필터링된 결과 로그
         if new_transcripts:
-            print(f"   ✅ Found {len(new_transcripts)} new transcript(s)!")
-            for t in new_transcripts:
-                duration = t.get('duration', 0)
-                hours = int(duration // 3600)
-                minutes = int((duration % 3600) // 60)
-                print(f"      - {t['title']} ({hours:02d}:{minutes:02d}:00)")
+            print(f"   📋 Total new transcripts: {len(new_transcripts)}")
+            if filtered_transcripts:
+                print(f"   ✅ Found {len(filtered_transcripts)} matching '{FILTER_KEYWORD}':")
+                for t in filtered_transcripts:
+                    duration = t.get('duration', 0)
+                    hours = int(duration // 3600)
+                    minutes = int((duration % 3600) // 60)
+                    print(f"      - {t['title']} ({hours:02d}:{minutes:02d}:00)")
+            else:
+                print(f"   ⚠️  No transcripts matching '{FILTER_KEYWORD}'")
+                # 필터에 걸리지 않은 항목 표시 (디버깅용)
+                print(f"   📝 Available transcripts:")
+                for t in new_transcripts[:3]:  # 최대 3개만
+                    print(f"      - {t['title']}")
         else:
             print("   No new transcripts")
 
-        return new_transcripts
+        return filtered_transcripts
 
     except Exception as e:
         print(f"   ❌ Error: {e}")
@@ -102,19 +139,20 @@ def process_transcript(transcript_id, title):
 
         # Step 2: Split into sections
         print("[2/5] ✂️  Splitting into sections...")
-        processor = TranscriptProcessor(max_tokens_per_section=4000)
+        processor = TranscriptProcessor(max_tokens_per_section=MAX_TOKENS_PER_SECTION)
         sections = processor.split_with_topic_detection(
             transcript,
             min_section_minutes=15,
-            max_tokens=4000
+            max_tokens=MAX_TOKENS_PER_SECTION
         )
         print(f"   ✅ Created {len(sections)} sections")
 
         # Step 3: Process with Claude
         print("[3/5] 🤖 Processing with Claude API...")
+        print(f"   🤖 Model: {CLAUDE_MODEL}")
         claude = ClaudeProcessor(
-            model="claude-3-7-sonnet-20250219",
-            max_tokens=16000
+            model=CLAUDE_MODEL,
+            max_tokens=MAX_OUTPUT_TOKENS
         )
         processed_sections = claude.process_all_sections(
             sections,
@@ -150,24 +188,30 @@ def process_transcript(transcript_id, title):
         claude.save_document(complete_document, local_path)
         print(f"   ✅ Saved locally: {local_path}")
 
-        # Upload to Google Docs (if configured)
-        try:
-            google_docs = GoogleDocsClient()
-            doc_title = f"{transcript.title} - {transcript.date.strftime('%Y-%m-%d')}"
-            doc_id, doc_url = google_docs.upload_markdown_document(doc_title, complete_document)
+        # Upload to Google Docs (if enabled)
+        if ENABLE_GOOGLE_DOCS:
+            try:
+                google_docs = GoogleDocsClient()
+                doc_title = GOOGLE_DOCS_TITLE_FORMAT.format(
+                    title=transcript.title,
+                    date=transcript.date.strftime('%Y-%m-%d')
+                )
+                doc_id, doc_url = google_docs.upload_markdown_document(doc_title, complete_document)
 
-            # Save URL
-            url_file = os.path.join(output_dir, "google_docs_url.txt")
-            with open(url_file, 'w') as f:
-                f.write(f"Title: {doc_title}\n")
-                f.write(f"URL: {doc_url}\n")
-                f.write(f"ID: {doc_id}\n")
+                # Save URL
+                url_file = os.path.join(output_dir, "google_docs_url.txt")
+                with open(url_file, 'w') as f:
+                    f.write(f"Title: {doc_title}\n")
+                    f.write(f"URL: {doc_url}\n")
+                    f.write(f"ID: {doc_id}\n")
 
-            print(f"   ✅ Google Docs: {doc_url}")
+                print(f"   ✅ Google Docs: {doc_url}")
 
-        except Exception as e:
-            print(f"   ⚠️  Google Docs upload failed: {e}")
-            print(f"   Document saved locally only")
+            except Exception as e:
+                print(f"   ⚠️  Google Docs upload failed: {e}")
+                print(f"   Document saved locally only")
+        else:
+            print(f"   ⚠️  Google Docs upload disabled (check config.py)")
 
         # Mark as processed
         save_processed_id(transcript_id, title)
@@ -199,16 +243,18 @@ def main():
     print("=" * 80)
     print()
     print("⚙️  설정:")
-    print(f"   체크 주기: 5분마다")
-    print(f"   Fireflies API: {os.getenv('FIREFLIES_API_KEY')[:10]}...")
-    print(f"   Claude API: {os.getenv('ANTHROPIC_API_KEY')[:10]}...")
+    print(f"   📌 필터 키워드: '{FILTER_KEYWORD}'")
+    print(f"   ⏱️  체크 주기: {CHECK_INTERVAL}초 ({CHECK_INTERVAL//60}분)")
+    print(f"   🤖 Claude 모델: {CLAUDE_MODEL}")
+    print(f"   ☁️  Google Docs: {'활성화' if ENABLE_GOOGLE_DOCS else '비활성화'}")
+    print(f"   🔑 Fireflies API: {os.getenv('FIREFLIES_API_KEY')[:10]}...")
+    print(f"   🔑 Claude API: {os.getenv('ANTHROPIC_API_KEY')[:10]}...")
     print()
+    print("💡 설정 변경: config.py 파일 편집")
     print("💡 종료하려면 Ctrl+C를 누르세요")
     print()
     print("=" * 80)
     print()
-
-    CHECK_INTERVAL = 300  # 5 minutes
 
     try:
         while True:
